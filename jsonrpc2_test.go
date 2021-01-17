@@ -1,4 +1,4 @@
-package jsonrpc2
+package rpc2jsonrpc2
 
 import (
 	"net"

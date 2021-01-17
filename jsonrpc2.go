@@ -1,4 +1,4 @@
-// Package jsonrpc2 implements a JSON-RPC 2.0 ClientCodec and ServerCodec for the rpc2 package.
+// Package rpc2jsonrpc2 implements a JSON-RPC 2.0 ClientCodec and ServerCodec for the rpc2 package.
 //
 // Beside struct types, JSONCodec allows using positional arguments.
 // Use []interface{} as the type of argument when sending and receiving methods.
@@ -12,7 +12,7 @@
 //	var result float64
 // 	client.Call("add", []interface{}{1, 2}, &result)
 //
-package jsonrpc2
+package rpc2jsonrpc2
 
 import (
 	"encoding/json"
@@ -70,11 +70,11 @@ type serverRequest struct {
 	Jsonrpc string           `json:"jsonrpc"`
 	Method  string           `json:"method"`
 	Params  *json.RawMessage `json:"params"`
-	Id      *json.RawMessage `json:"id"`
+	ID      *json.RawMessage `json:"id"`
 }
 type clientResponse struct {
 	Jsonrpc string           `json:"jsonrpc"`
-	Id      uint64           `json:"id"`
+	ID      uint64           `json:"id"`
 	Result  *json.RawMessage `json:"result,omitempty"`
 	Error   interface{}      `json:"error,omitempty"`
 }
@@ -82,7 +82,7 @@ type clientResponse struct {
 // to Marshal
 type serverResponse struct {
 	Jsonrpc string           `json:"jsonrpc"`
-	Id      *json.RawMessage `json:"id"`
+	ID      *json.RawMessage `json:"id"`
 	Result  *interface{}     `json:"result,omitempty"`
 	Error   *interface{}     `json:"error,omitempty"`
 }
@@ -90,14 +90,14 @@ type clientRequestArray struct {
 	Jsonrpc string        `json:"jsonrpc"`
 	Method  string        `json:"method"`
 	Params  []interface{} `json:"params"`
-	Id      *uint64       `json:"id"`
+	ID      *uint64       `json:"id"`
 }
 
 type clientRequestNamed struct {
 	Jsonrpc string      `json:"jsonrpc"`
 	Method  string      `json:"method"`
 	Params  interface{} `json:"params"`
-	Id      *uint64     `json:"id"`
+	ID      *uint64     `json:"id"`
 }
 
 func (c *jsonCodec) ReadHeader(req *rpc2.Request, resp *rpc2.Response) error {
@@ -108,7 +108,7 @@ func (c *jsonCodec) ReadHeader(req *rpc2.Request, resp *rpc2.Response) error {
 	if c.msg.Method != "" {
 		// request comes to server
 		c.serverRequest.Jsonrpc = c.msg.Jsonrpc
-		c.serverRequest.Id = c.msg.Id
+		c.serverRequest.ID = c.msg.Id
 		c.serverRequest.Method = c.msg.Method
 		c.serverRequest.Params = c.msg.Params
 
@@ -117,19 +117,19 @@ func (c *jsonCodec) ReadHeader(req *rpc2.Request, resp *rpc2.Response) error {
 		// JSON request id can be any JSON value;
 		// RPC package expects uint64.  Translate to
 		// internal uint64 and save JSON on the side.
-		if c.serverRequest.Id == nil {
+		if c.serverRequest.ID == nil {
 			// Notification
 		} else {
 			c.mutex.Lock()
 			c.seq++
-			c.pending[c.seq] = c.serverRequest.Id
-			c.serverRequest.Id = nil
+			c.pending[c.seq] = c.serverRequest.ID
+			c.serverRequest.ID = nil
 			req.Seq = c.seq
 			c.mutex.Unlock()
 		}
 	} else {
 		// response comes to client
-		err := json.Unmarshal(*c.msg.Id, &c.clientResponse.Id)
+		err := json.Unmarshal(*c.msg.Id, &c.clientResponse.ID)
 		if err != nil {
 			return err
 		}
@@ -138,7 +138,7 @@ func (c *jsonCodec) ReadHeader(req *rpc2.Request, resp *rpc2.Response) error {
 		c.clientResponse.Error = c.msg.Error
 
 		resp.Error = ""
-		resp.Seq = c.clientResponse.Id
+		resp.Seq = c.clientResponse.ID
 		if c.clientResponse.Error != nil || c.clientResponse.Result == nil {
 			x, ok := c.clientResponse.Error.(string)
 			if !ok {
@@ -190,10 +190,10 @@ func (c *jsonCodec) WriteRequest(r *rpc2.Request, param interface{}) error {
 		req.Params = param
 		if r.Seq == 0 {
 			// Notification
-			req.Id = nil
+			req.ID = nil
 		} else {
 			seq := r.Seq
-			req.Id = &seq
+			req.ID = &seq
 		}
 		return c.enc.Encode(req)
 	default:
@@ -201,10 +201,10 @@ func (c *jsonCodec) WriteRequest(r *rpc2.Request, param interface{}) error {
 		req.Params = param
 		if r.Seq == 0 {
 			// Notification
-			req.Id = nil
+			req.ID = nil
 		} else {
 			seq := r.Seq
-			req.Id = &seq
+			req.ID = &seq
 		}
 		return c.enc.Encode(req)
 	}
@@ -226,7 +226,7 @@ func (c *jsonCodec) WriteResponse(r *rpc2.Response, x interface{}) error {
 		// Invalid request so no id.  Use JSON null.
 		b = &null
 	}
-	resp := serverResponse{Jsonrpc: "2.0", Id: b}
+	resp := serverResponse{Jsonrpc: "2.0", ID: b}
 	if r.Error == "" {
 		resp.Error = nil
 		resp.Result = &x
